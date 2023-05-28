@@ -33,7 +33,7 @@ def call_gpt(prompt):
 
 def recursive_analyze(text):
     text_chunks = processing.clean_text(text)
-    text_chunks = processing.split_text(text)
+    text_chunks = processing.split_text(text_chunks)
     print("The total length of all text chunks is: ")
     print(len(text_chunks))
     # Use ThreadPoolExecutor to parallelize GPT calls

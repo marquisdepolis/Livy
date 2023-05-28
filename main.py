@@ -109,7 +109,7 @@ def search(query: str, index: faiss.IndexIDMap, text_paths: Dict[int, str], imag
 # Analyze input
 def analyze_input(input_type, company, url):
     text = ""
-    if input_type == "url": # Placeholder for url scraping
+    if input_type == "url":
         data = urlscrape.link(url)
     elif input_type in ["pdf", "pptx", "docx"]:
         file_path = url
@@ -128,6 +128,20 @@ def analyze_input(input_type, company, url):
 
     return data
 
+def generate_questions(query: str, model_name: str, tokenizer) -> List[str]:
+    prompt = f"Given the context '{query}', what questions should we ask to gain more information?"
+    messages = [{"role": role, "content": content} for role, content in [("system", "You are a helpful assistant."), ("user", prompt)]]
+    response = openai.ChatCompletion.create(
+        model=MODEL,
+        messages=messages,
+        temperature=0.5
+    )
+    return response.choices[0]['message']['content'].strip()
+    questions = response.choices[0].text.strip().split("\n")
+    questions = [question.strip() for question in questions if question.strip()]
+
+    return questions
+
 def main():
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -135,33 +149,37 @@ def main():
     text_documents, image_documents = preprocess_documents(root_folder)
 
     try:
-        # Try to load existing index and paths
         index, text_paths, image_paths = load_index_and_paths(INDEX_FILENAME, PATHS_FILENAME)
     except Exception as e:
         print(f"Could not load index and paths due to error: {str(e)}. Creating a new index...")
-        # If loading failed, create a new index
         index, text_paths, image_paths = embeddings.index_embeddings(text_documents, image_documents)
-        # Save the new index and paths to disk
         save_index_and_paths(index, text_paths, image_paths, INDEX_FILENAME, PATHS_FILENAME)
 
-    while True:  # loop to allow multiple questions without having to re-run the script
-        query = input("Please input your query (or 'quit' to exit):- ")
-        if query.lower() == "quit":
-            break
-        results = search(query, index, text_paths, image_paths)
+    query = input("Please input your query:- ")
+    section_names = input("Please input the names of the report sections (comma-separated):- ").split(',')
 
-        for path, chunk, score in results:
-            print(f"Path: {path}, Chunk: {chunk}, Score: {score}")
+    report = {}
+    for section in section_names:
+        print(f"\nGenerating content for {section}...\n")
+        questions = generate_questions(query, MODEL, tokenizer)
+        print(f"The questions are: {questions}")
+        section_content = []
 
-        # Process the top 3 results, or less if there are not enough results
-        for i in range(min(3, len(results))):  
-            top_result_path, top_result_chunk = results[i][:2]  # Get the path and chunk of the top result
-            input_type = top_result_path.split('.')[-1]
-            text = analyze_input(input_type, None, top_result_path)
-            summary = gpt_calls.recursive_analyze(text)
+        for question in questions:
+            results = search(question, index, text_paths, image_paths)
 
-            print(f"\nSummary of result {i+1}:")
-            print(summary)
+            for i in range(min(1, len(results))):
+                top_result_path, top_result_chunk = results[i][:2]
+                input_type = top_result_path.split('.')[-1]
+                text = analyze_input(input_type, None, top_result_path)
+                summary = gpt_calls.recursive_analyze(text)
+                section_content.append(summary)
+
+        report[section] = ' '.join(section_content)
+
+    # Print report
+    for section, content in report.items():
+        print(f"\n{section}\n{content}")
 
 if __name__ == "__main__":
     main()
