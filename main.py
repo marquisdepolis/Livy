@@ -129,7 +129,7 @@ def analyze_input(input_type, company, url):
     return data
 
 def generate_questions(query: str, model_name: str, tokenizer) -> List[str]:
-    prompt = f"Given the context '{query}', what questions should we ask to gain more information?"
+    prompt = f"Given the context '{query}', What 1-2 questions should we ask to gain more information?"
     messages = [{"role": role, "content": content} for role, content in [("system", "You are a helpful assistant."), ("user", prompt)]]
     response = openai.ChatCompletion.create(
         model=MODEL,
