@@ -46,4 +46,3 @@ def recursive_analyze(text):
     prompt = f"Please summarise. If no useful information is present, please reply with 'info not available':\n\n{combined_insights}"
     summary = call_gpt(prompt)
     return summary
-
