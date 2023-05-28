@@ -136,8 +136,8 @@ def generate_questions(query: str, model_name: str, tokenizer) -> List[str]:
         messages=messages,
         temperature=0.5
     )
-    return response.choices[0]['message']['content'].strip()
-    questions = response.choices[0].text.strip().split("\n")
+
+    questions = response.choices[0]['message']['content'].strip().split("\n")
     questions = [question.strip() for question in questions if question.strip()]
 
     return questions
@@ -167,7 +167,7 @@ def main():
 
         for question in questions:
             results = search(question, index, text_paths, image_paths)
-
+            print(f"\n The results are: {results}\n\n")
             for i in range(min(1, len(results))):
                 top_result_path, top_result_chunk = results[i][:2]
                 input_type = top_result_path.split('.')[-1]
