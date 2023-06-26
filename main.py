@@ -142,7 +142,9 @@ def generate_questions(query: str, model_name: str, tokenizer) -> List[str]:
 def main():
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    root_folder = input("Please input the filepath to the folder:- ")
+    current_dir = os.getcwd()
+    root_folder = os.path.join(current_dir, "Input")
+    # root_folder = input("Please input the filepath to the folder:- ")
     text_documents, image_documents = preprocess_documents(root_folder)
 
     try:
