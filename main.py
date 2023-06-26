@@ -159,7 +159,9 @@ def main():
             for i in range(min(1, len(results))):
                 top_result_path, top_result_chunk = results[i][:2]
                 input_type = top_result_path.split('.')[-1]
+                # Should combine path analysis + the chunk analysis from the following line
                 text = analyze_input(input_type, None, top_result_path)
+                text = gpt_calls.recursive_analyze(top_result_chunk)
                 summary = gpt_calls.recursive_analyze(text)
                 section_content.append(summary)
 
