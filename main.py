@@ -50,13 +50,11 @@ CHUNK_SIZE=7000
 INDEX_FILENAME = "index_file"
 PATHS_FILENAME = "paths_file"
 
-# Save the index and dictionaries
 def save_index_and_paths(index, text_paths, image_paths, index_file, paths_file):
     faiss.write_index(index, index_file)
     with open(paths_file, "wb") as f:
         pickle.dump((text_paths, image_paths), f)
 
-# Load the index and dictionaries
 def load_index_and_paths(index_file, paths_file):
     index = faiss.read_index(index_file)
     with open(paths_file, "rb") as f:
@@ -106,7 +104,6 @@ def search(query: str, index: faiss.IndexIDMap, text_paths: Dict[int, str], imag
 
     return results
 
-# Analyze input
 def analyze_input(input_type, company, url):
     text = ""
     if input_type == "url":
@@ -134,7 +131,7 @@ def generate_questions(query: str, model_name: str, tokenizer) -> List[str]:
     response = openai.ChatCompletion.create(
         model=MODEL,
         messages=messages,
-        temperature=0.5
+        temperature=0.75
     )
 
     questions = response.choices[0]['message']['content'].strip().split("\n")
@@ -177,7 +174,6 @@ def main():
 
         report[section] = ' '.join(section_content)
 
-    # Print report
     for section, content in report.items():
         print(f"\n{section}\n{content}")
 
