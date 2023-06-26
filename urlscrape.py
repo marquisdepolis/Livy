@@ -1,7 +1,5 @@
 # %%
-import spacy
 from functools import lru_cache
-import os
 import re
 import warnings
 from urllib.parse import urlparse, urljoin
