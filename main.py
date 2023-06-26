@@ -1,14 +1,9 @@
 import pickle
-import nltk
 import PIL
 from PIL import Image
-import torch
 import torchvision.models as models
 import torchvision.transforms as transforms
-import concurrent.futures
-import json
 import os
-import re
 import warnings
 from collections import defaultdict
 from datetime import datetime
@@ -19,13 +14,7 @@ from urllib.parse import urlparse, urljoin
 import faiss
 import numpy as np
 import openai
-import PyPDF2
-import requests
-import spacy
-import tldextract
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from pptx import Presentation
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tkinter import Tk, filedialog
 from transformers import GPT2Tokenizer
