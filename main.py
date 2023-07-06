@@ -129,8 +129,6 @@ def generate_questions(query: str, model_name: str, tokenizer) -> List[str]:
     return questions
 
 def main():
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-
     current_dir = os.getcwd()
     root_folder = os.path.join(current_dir, "Input")
     # root_folder = input("Please input the filepath to the folder:- ")
@@ -160,6 +158,7 @@ def main():
                 top_result_path, top_result_chunk = results[i][:2]
                 input_type = top_result_path.split('.')[-1]
                 # Should combine path analysis + the chunk analysis from the following line
+                # Should add a lookup to the actual path so we get the "quotes" which can be inserted into the document if needed
                 # text = analyze_input(input_type, None, top_result_path)
                 text = gpt_calls.recursive_analyze(top_result_chunk)
                 summary = gpt_calls.recursive_analyze(text)

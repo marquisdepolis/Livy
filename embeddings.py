@@ -36,7 +36,6 @@ def embed_text(text: str) -> np.ndarray:
     response = openai.Embedding.create(input=text, model="text-embedding-ada-002")
     return np.array(response['data'][0]['embedding'])
 
-
 def index_embeddings(text_documents: List[Tuple[str, str]], image_documents: List[Tuple[str, Image]]) -> Tuple[faiss.Index, Dict[int, Tuple[str, str]], Dict[int, str]]:
     text_paths = {}
     image_paths = {}
