@@ -34,25 +34,29 @@ load_dotenv()
 warnings.filterwarnings("ignore")
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-MODEL = "gpt-4"
-CHUNK_SIZE=7000
-INDEX_FILENAME = "index_file"
+MODEL = "gpt-3.5-turbo"
+CHUNK_SIZE=2000
+CHUNK_INDEX_FILENAME = "chunk_index_file"
+SENTENCE_INDEX_FILENAME = "sentence_index_file"
 PATHS_FILENAME = "paths_file"
 
-def save_index_and_paths(index, text_paths, image_paths, index_file, paths_file):
-    faiss.write_index(index, index_file)
+def save_indices_and_paths(text_index, sentence_index, text_paths, sentence_paths, image_paths, chunk_index_file, sentence_index_file, paths_file):
+    faiss.write_index(text_index, chunk_index_file)
+    faiss.write_index(sentence_index, sentence_index_file)
     with open(paths_file, "wb") as f:
-        pickle.dump((text_paths, image_paths), f)
+        pickle.dump((text_paths, sentence_paths, image_paths), f)
 
-def load_index_and_paths(index_file, paths_file):
-    index = faiss.read_index(index_file)
+def load_indices_and_paths(chunk_index_file, sentence_index_file, paths_file):
+    text_index = faiss.read_index(chunk_index_file)
+    sentence_index = faiss.read_index(sentence_index_file)
     with open(paths_file, "rb") as f:
-        text_paths, image_paths = pickle.load(f)
-    return index, text_paths, image_paths
+        text_paths, sentence_paths, image_paths = pickle.load(f)
+    return text_index, sentence_index, text_paths, sentence_paths, image_paths
 
 def preprocess_documents(root_folder: str) -> Tuple[List[Tuple[str, str]], List[Tuple[str, PIL.Image.Image]]]:
     text_documents = []
     image_documents = []
+    sentence_documents = []
 
     for subdir, dirs, files in os.walk(root_folder):
         for file in files:
@@ -66,14 +70,18 @@ def preprocess_documents(root_folder: str) -> Tuple[List[Tuple[str, str]], List[
                 text = analyze_input(input_type, None, file_path)
                 cleaned_text = processing.clean_text(text)
                 chunks = processing.split_text(cleaned_text)
-
                 for chunk in chunks:
                     text_documents.append((file_path, chunk))
             elif input_type in ['jpg', 'png', 'jpeg']:
                 image = PIL.Image.open(file_path)
                 image_documents.append((file_path, image))
 
-    return text_documents, image_documents
+    for file_path, chunk in text_documents:
+        sentences = processing.split_into_sentences(chunk)
+        for sentence in sentences:
+            sentence_documents.append((file_path, sentence))
+
+    return text_documents, sentence_documents, image_documents
 
 def search(query: str, index: faiss.IndexIDMap, text_paths: Dict[int, str], image_paths: Dict[int, str]) -> List[Tuple[str, float]]:
     # Embed the query
@@ -132,14 +140,14 @@ def main():
     current_dir = os.getcwd()
     root_folder = os.path.join(current_dir, "Input")
     # root_folder = input("Please input the filepath to the folder:- ")
-    text_documents, image_documents = preprocess_documents(root_folder)
+    text_documents, sentence_documents, image_documents = preprocess_documents(root_folder)
 
     try:
-        index, text_paths, image_paths = load_index_and_paths(INDEX_FILENAME, PATHS_FILENAME)
+        text_index, sentence_index, text_paths, sentence_paths, image_paths = load_indices_and_paths(CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
     except Exception as e:
         print(f"Could not load index and paths due to error: {str(e)}. Creating a new index...")
-        index, text_paths, image_paths = embeddings.index_embeddings(text_documents, image_documents)
-        save_index_and_paths(index, text_paths, image_paths, INDEX_FILENAME, PATHS_FILENAME)
+        text_index, sentence_index, text_paths, sentence_paths, image_paths = embeddings.index_embeddings(text_documents, image_documents)
+        save_indices_and_paths(text_index, sentence_index, text_paths, sentence_paths, image_paths, CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
 
     query = input("Please input your query:- ")
     section_names = input("Please input the names of the report sections (comma-separated):- ").split(',')
@@ -152,7 +160,8 @@ def main():
         section_content = []
 
         for question in questions:
-            results = search(question, index, text_paths, image_paths)
+            sentence_results = search(question, sentence_index, sentence_paths, image_paths)
+            results = search(question, text_index, text_paths, image_paths)
             print(f"\n The results are: {results}\n\n")
             for i in range(min(1, len(results))):
                 top_result_path, top_result_chunk = results[i][:2]

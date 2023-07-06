@@ -5,7 +5,7 @@ from transformers import GPT2Tokenizer
 from nltk import tokenize
 
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-CHUNK_SIZE=7000
+CHUNK_SIZE=300
 
 def clean_text(text):
     cleaned_text = " ".join(text.split())
@@ -46,3 +46,7 @@ def split_text(text: str, max_tokens=CHUNK_SIZE) -> List[str]:
         chunks.append(" ".join(current_chunk))
 
     return chunks
+
+def split_into_sentences(text: str) -> List[str]:
+    sentences = nltk.sent_tokenize(text)
+    return sentences
