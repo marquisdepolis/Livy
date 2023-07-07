@@ -5,7 +5,7 @@ from transformers import GPT2Tokenizer
 from nltk import tokenize
 
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-CHUNK_SIZE=300
+CHUNK_SIZE=1000
 
 def clean_text(text):
     cleaned_text = " ".join(text.split())
