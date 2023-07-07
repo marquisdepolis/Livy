@@ -20,7 +20,6 @@ from tkinter import Tk, filedialog
 from transformers import GPT2Tokenizer
 from transformers import AutoTokenizer, AutoModel
 from torch.utils.data import DataLoader
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
 from readppt import read_ppt
 import readpdf
@@ -33,12 +32,24 @@ import urlscrape
 load_dotenv()
 warnings.filterwarnings("ignore")
 openai.api_key = os.getenv('OPENAI_API_KEY')
-
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 MODEL = "gpt-3.5-turbo"
 CHUNK_SIZE=2000
 CHUNK_INDEX_FILENAME = "chunk_index_file"
 SENTENCE_INDEX_FILENAME = "sentence_index_file"
 PATHS_FILENAME = "paths_file"
+MODIFIED_TIMES_FILE = "modified_times_file"
+
+def load_modified_times():
+    if os.path.exists(MODIFIED_TIMES_FILE):
+        with open(MODIFIED_TIMES_FILE, "rb") as f:
+            return pickle.load(f)
+    else:
+        return {}
+
+def save_modified_times(modified_times):
+    with open(MODIFIED_TIMES_FILE, "wb") as f:
+        pickle.dump(modified_times, f)
 
 def save_indices_and_paths(text_index, sentence_index, text_paths, sentence_paths, image_paths, chunk_index_file, sentence_index_file, paths_file):
     faiss.write_index(text_index, chunk_index_file)
@@ -88,7 +99,7 @@ def search(query: str, index: faiss.IndexIDMap, text_paths: Dict[int, str], imag
     query_embedding = embeddings.embed_text(query)
 
     # Search the index
-    D, I = index.search(np.array([query_embedding]), k=10)
+    D, I = index.search(np.array([query_embedding]), k=3)
 
     # Get the paths and scores of the search results
     results = []
@@ -140,7 +151,44 @@ def main():
     current_dir = os.getcwd()
     root_folder = os.path.join(current_dir, "Input")
     # root_folder = input("Please input the filepath to the folder:- ")
-    text_documents, sentence_documents, image_documents = preprocess_documents(root_folder)
+
+    # Load the old modified times
+    old_modified_times = load_modified_times()
+
+    # Get the new modified times
+    new_modified_times = {}
+    for subdir, dirs, files in os.walk(root_folder):
+        for file in files:
+            file_path = os.path.join(subdir, file)
+            new_modified_times[file_path] = os.path.getmtime(file_path)
+
+    # Check if any files have been added, modified, or deleted
+    files_have_changed = len(old_modified_times) != len(new_modified_times)
+    if not files_have_changed:
+        for file_path, new_time in new_modified_times.items():
+            if file_path not in old_modified_times or old_modified_times[file_path] != new_time:
+                files_have_changed = True
+                break
+
+    # Check if any of the previously indexed files have been deleted
+    _, _, text_paths, _, _ = load_indices_and_paths(CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
+    for file_path in text_paths:
+        if not os.path.isfile(file_path):
+            files_have_changed = True
+            break
+
+    # If any files have changed, re-embed and re-index them
+    if files_have_changed:
+        print("Files have changed. Re-embedding and re-indexing...")
+        text_documents, sentence_documents, image_documents = preprocess_documents(root_folder)
+        text_index, sentence_index, text_paths, sentence_paths, image_paths = embeddings.index_embeddings(text_documents, image_documents)
+        save_indices_and_paths(text_index, sentence_index, text_paths, sentence_paths, image_paths, CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
+    else:
+        print("No files have changed. Loading the existing index...")
+        text_index, sentence_index, text_paths, sentence_paths, image_paths = load_indices_and_paths(CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
+
+    # Save the new modified times
+    save_modified_times(new_modified_times)
 
     try:
         text_index, sentence_index, text_paths, sentence_paths, image_paths = load_indices_and_paths(CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
