@@ -2,7 +2,6 @@ import re
 import nltk
 from typing import List, Tuple
 from transformers import GPT2Tokenizer
-from nltk import tokenize
 
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 CHUNK_SIZE=1000
