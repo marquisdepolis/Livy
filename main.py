@@ -185,18 +185,15 @@ def main():
         save_indices_and_paths(text_index, sentence_index, text_paths, sentence_paths, image_paths, CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
     else:
         print("No files have changed. Loading the existing index...")
-        text_index, sentence_index, text_paths, sentence_paths, image_paths = load_indices_and_paths(CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
+        try:
+            text_index, sentence_index, text_paths, sentence_paths, image_paths = load_indices_and_paths(CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
+        except Exception as e:
+            print(f"Could not load index and paths due to error: {str(e)}. Creating a new index...")
+            text_index, sentence_index, text_paths, sentence_paths, image_paths = embeddings.index_embeddings(text_documents, image_documents)
+            save_indices_and_paths(text_index, sentence_index, text_paths, sentence_paths, image_paths, CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
 
     # Save the new modified times
     save_modified_times(new_modified_times)
-
-    try:
-        text_index, sentence_index, text_paths, sentence_paths, image_paths = load_indices_and_paths(CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
-    except Exception as e:
-        print(f"Could not load index and paths due to error: {str(e)}. Creating a new index...")
-        text_index, sentence_index, text_paths, sentence_paths, image_paths = embeddings.index_embeddings(text_documents, image_documents)
-        save_indices_and_paths(text_index, sentence_index, text_paths, sentence_paths, image_paths, CHUNK_INDEX_FILENAME, SENTENCE_INDEX_FILENAME, PATHS_FILENAME)
-
     query = input("Please input your query:- ")
     section_names = input("Please input the names of the report sections (comma-separated):- ").split(',')
 
