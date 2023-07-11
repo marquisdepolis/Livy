@@ -4,6 +4,7 @@ from PIL import Image
 import torchvision.models as models
 import torchvision.transforms as transforms
 import os
+import csv
 import warnings
 from collections import defaultdict
 from datetime import datetime
@@ -39,6 +40,14 @@ CHUNK_INDEX_FILENAME = "chunk_index_file"
 SENTENCE_INDEX_FILENAME = "sentence_index_file"
 PATHS_FILENAME = "paths_file"
 MODIFIED_TIMES_FILE = "modified_times_file"
+
+def load_questions_and_answers(file_path):
+    q_and_a = []
+    with open(file_path, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            q_and_a.append((row['question_details'], row['answers']))
+    return q_and_a
 
 def load_modified_times():
     if os.path.exists(MODIFIED_TIMES_FILE):
@@ -151,6 +160,7 @@ def main():
     current_dir = os.getcwd()
     root_folder = os.path.join(current_dir, "Input")
     # root_folder = input("Please input the filepath to the folder:- ")
+    q_and_a = load_questions_and_answers('Input/questions.csv')
 
     # Load the old modified times
     old_modified_times = load_modified_times()
@@ -205,18 +215,26 @@ def main():
         section_content = []
 
         for question in questions:
+            # Search for answers to the question in the Q&A pairs
+            relevant_facts = [answer for q, answer in q_and_a if q == question]
             sentence_results = search(question, sentence_index, sentence_paths, image_paths)
             results = search(question, text_index, text_paths, image_paths)
             print(f"\n The results are: {results}\n\n")
-            for i in range(min(1, len(results))):
-                top_result_path, top_result_chunk = results[i][:2]
-                input_type = top_result_path.split('.')[-1]
-                # Should combine path analysis + the chunk analysis from the following line
-                # Should add a lookup to the actual path so we get the "quotes" which can be inserted into the document if needed
-                # text = analyze_input(input_type, None, top_result_path)
-                text = gpt_calls.recursive_analyze(top_result_chunk)
+            # Consider both the results from the documents and the relevant facts from the Q&A pairs
+            all_results = [chunk for path, chunk, score in results] + relevant_facts
+            for result in all_results:
+                text = gpt_calls.recursive_analyze(result)
                 summary = gpt_calls.recursive_analyze(text)
                 section_content.append(summary)
+            # for i in range(min(1, len(results))):
+            #     top_result_path, top_result_chunk = results[i][:2]
+            #     input_type = top_result_path.split('.')[-1]
+            #     # Should combine path analysis + the chunk analysis from the following line
+            #     # Should add a lookup to the actual path so we get the "quotes" which can be inserted into the document if needed
+            #     # text = analyze_input(input_type, None, top_result_path)
+            #     text = gpt_calls.recursive_analyze(top_result_chunk)
+            #     summary = gpt_calls.recursive_analyze(text)
+            #     section_content.append(summary)
 
         report[section] = ' '.join(section_content)
 
