@@ -4,8 +4,8 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 from typing import List
 import processing
 
-MODEL = "gpt-4"
-CHUNK_SIZE=7000
+MODEL = "gpt-3.5-turbo"
+CHUNK_SIZE=2000
 
 def base_gptcall(prompt):
     messages = [{"role": "system", "content": prompt}]
