@@ -1,11 +1,19 @@
 import concurrent.futures
 import openai
+import re
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from typing import List
-import processing
 
 MODEL = "gpt-3.5-turbo"
 CHUNK_SIZE=2000
+
+def split_text(text, chunk_size=CHUNK_SIZE):
+    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+
+def clean_text(text):
+    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    cleaned_text = ' '.join(cleaned_text.split())
+    return cleaned_text
 
 def base_gptcall(prompt):
     messages = [{"role": "system", "content": prompt}]
@@ -20,11 +28,8 @@ def base_gptcall(prompt):
 def call_gpt(prompt):
     answers = []
     if len(prompt)>CHUNK_SIZE:
-        textchunks = processing.split_text(prompt)
+        textchunks = split_text(prompt)
         for chunk in textchunks:
-            answer = []
-            # print(len(chunk))
-            # print(chunk)
             answer = base_gptcall(chunk)
             answers.append(answer)
         return ' '.join(answers)
@@ -32,8 +37,8 @@ def call_gpt(prompt):
         return base_gptcall(prompt)
 
 def recursive_analyze(text):
-    text_chunks = processing.clean_text(text)
-    text_chunks = processing.split_text(text_chunks)
+    text_chunks = clean_text(text)
+    text_chunks = split_text(text_chunks)
     print("The total length of all text chunks is: ")
     print(len(text_chunks))
     # Use ThreadPoolExecutor to parallelize GPT calls
