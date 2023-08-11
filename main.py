@@ -4,7 +4,6 @@ from PIL import Image
 import torchvision.models as models
 import torchvision.transforms as transforms
 import os
-import re
 import csv
 import warnings
 from collections import defaultdict
@@ -26,6 +25,7 @@ from torch.utils.data import DataLoader
 from readppt import read_ppt
 import readpdf
 import readdoc
+import processing
 import embeddings
 import gpt_calls
 import urlscrape
@@ -40,18 +40,6 @@ CHUNK_INDEX_FILENAME = "chunk_index_file"
 SENTENCE_INDEX_FILENAME = "sentence_index_file"
 PATHS_FILENAME = "paths_file"
 MODIFIED_TIMES_FILE = "modified_times_file"
-
-def clean_text(text):
-    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
-    cleaned_text = ' '.join(cleaned_text.split())
-    return cleaned_text
-
-def split_text(text, chunk_size=CHUNK_SIZE):
-    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
-
-def split_into_sentences(text):
-    # Split text by periods, exclamation points, and question marks, followed by space or end-of-line
-    return re.split(r'[.!?]\s', text)
 
 def load_questions_and_answers(file_path):
     q_and_a = []
@@ -100,8 +88,8 @@ def preprocess_documents(root_folder: str) -> Tuple[List[Tuple[str, str]], List[
 
             if input_type in ['pdf', 'pptx', 'docx']:
                 text = analyze_input(input_type, None, file_path)
-                cleaned_text = clean_text(text)
-                chunks = split_text(cleaned_text)
+                cleaned_text = processing.clean_text(text)
+                chunks = processing.split_text(cleaned_text)
                 for chunk in chunks:
                     text_documents.append((file_path, chunk))
             elif input_type in ['jpg', 'png', 'jpeg']:
@@ -109,7 +97,7 @@ def preprocess_documents(root_folder: str) -> Tuple[List[Tuple[str, str]], List[
                 image_documents.append((file_path, image))
 
     for file_path, chunk in text_documents:
-        sentences = split_into_sentences(chunk)
+        sentences = processing.split_into_sentences(chunk)
         for sentence in sentences:
             sentence_documents.append((file_path, sentence))
 
